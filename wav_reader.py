@@ -17,7 +17,7 @@ def normalize_frames(m,epsilon=1e-12):
 
 
 # https://github.com/christianvazquez7/ivector/blob/master/MSRIT/rm_dc_n_dither.m
-def remove_dc_and_dither(sin, sample_rate):
+def remove_dc_and_dither(sin, sample_rate): # loại bỏ DC 
 	if sample_rate == 16e3:
 		alpha = 0.99
 	elif sample_rate == 8e3:
@@ -38,9 +38,9 @@ def get_fft_spectrum(filename, buckets):
 
 	# get FFT spectrum
 	signal = remove_dc_and_dither(signal, c.SAMPLE_RATE)
-	signal = sigproc.preemphasis(signal, coeff=c.PREEMPHASIS_ALPHA)
+	signal = sigproc.preemphasis(signal, coeff=c.PREEMPHASIS_ALPHA) # nhấn mạnh trước vào tín hiệu đầu vào
 	frames = sigproc.framesig(signal, frame_len=c.FRAME_LEN*c.SAMPLE_RATE, frame_step=c.FRAME_STEP*c.SAMPLE_RATE, winfunc=np.hamming)
-	fft = abs(np.fft.fft(frames,n=c.NUM_FFT))
+	fft = abs(np.fft.fft(frames,n=c.NUM_FFT)) #biến đổi furie nhanh
 	fft_norm = normalize_frames(fft.T)
 
 	# truncate to max bucket sizes

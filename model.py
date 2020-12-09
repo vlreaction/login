@@ -14,16 +14,26 @@ import constants as c
 def conv_bn_pool(inp_tensor,layer_idx,conv_filters,conv_kernel_size,conv_strides,conv_pad,
 	pool='',pool_size=(2, 2),pool_strides=None,
 	conv_layer_prefix='conv'):
-	x = ZeroPadding2D(padding=conv_pad,name='pad{}'.format(layer_idx))(inp_tensor)
-	x = Conv2D(filters=conv_filters,kernel_size=conv_kernel_size, strides=conv_strides, padding='valid', name='{}{}'.format(conv_layer_prefix,layer_idx))(x)
+	x = ZeroPadding2D(padding=conv_pad,name='pad{}'.format(layer_idx))(inp_tensor) 
+	# đệm vào input để thuận tiện cho việc trượt các filter (có bước nhảy)
+	x = Conv2D(filters=conv_filters,kernel_size=conv_kernel_size, strides=conv_strides, padding='valid', name='{}{}'.format(conv_layer_prefix,layer_idx))(x) 
+	# sử dụng cửa sổ trượt (filter) để trích xuất các đặc trưng của âm thanh
 	x = BatchNormalization(epsilon=1e-5,momentum=1,name='bn{}'.format(layer_idx))(x)
-	x = Activation('relu', name='relu{}'.format(layer_idx))(x)
+	x = Activation('relu', name='relu{}'.format(layer_idx))(x) 
+	# ReLU layer áp dụng các kích hoạt (activation function) max(0,x) đưa các giá trị âm về 0, mục đích là đảm bảo các giá trị không tuyến tính qua cấc layer (khử tuyến tính)
+	# không làm thay đổi kích thước của input
+
+	# Pooling layer: giảm chiều không gian của đầu vào, giảm độ phức tạp cần tính toán, thường hay dùng max pooling hơn
+	# giữ lại chi tiết quan trọng, max pooling: giữ lại pixel có giá trị lớn nhất, average pooling: tính trung bình các giá trị
 	if pool == 'max':
 		x = MaxPooling2D(pool_size=pool_size,strides=pool_strides,name='mpool{}'.format(layer_idx))(x)
 	elif pool == 'avg':
 		x = AveragePooling2D(pool_size=pool_size,strides=pool_strides,name='apool{}'.format(layer_idx))(x)
 	return x
 
+# FC layer: Fully connected layer: lớp kết nối đầy đủ như mạng NN thông thường
+# là phẳng input (flattent) thành 1 vector thay vì là 1 mảng nhiều chiều, rồi sortmax để phân loại đối tượng dựa vào vector đặc trưng đã tính toán ở các layer trước (tính ra xác suất)
+# BatchNorm để giảm thời gian training model, giảm tầm quan trọng của số lượng input vào, tăng tốc độ
 
 # Block of layers: Conv --> BatchNorm --> ReLU --> Dynamic average pool (fc6 -> apool6 only)
 def conv_bn_dynamic_apool(inp_tensor,layer_idx,conv_filters,conv_kernel_size,conv_strides,conv_pad,
@@ -77,4 +87,3 @@ def test():
 
 if __name__ == '__main__':
 	test()
-

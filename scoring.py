@@ -45,7 +45,7 @@ def get_embeddings_from_list_file(model, list_file, max_sec):
 	buckets = build_buckets(max_sec, c.BUCKET_STEP, c.FRAME_STEP)
 	result = pd.read_csv(list_file, delimiter=",")
 	result['features'] = result['filename'].apply(lambda x: get_fft_spectrum(x, buckets))
-	result['embedding'] = result['features'].apply(lambda x: np.squeeze(model.predict(x.reshape(1,*x.shape,1))))
+	result['embedding'] = result['features'].apply(lambda x: np.squeeze(model.predict(x.reshape(1,*x.shape,1)))) 
 	return result[['filename','speaker','embedding']]
 
 
@@ -79,7 +79,36 @@ def get_id_result():
 	with open(c.RESULT_FILE, 'w') as f:
 		scores.to_csv(f, index=False)
 
+model = vggvox_model()
+model.load_weights(c.WEIGHTS_FILE)
 
+print("Processing enroll samples....")
+enroll_result = get_embeddings_from_list_file(model, c.ENROLL_LIST_FILE, c.MAX_SEC)
+enroll_embs = np.array([emb.tolist() for emb in enroll_result['embedding']])
+speakers = enroll_result['speaker']
+
+def test():
+	print("Processing test samples....")
+	test_result = get_embeddings_from_list_file(model, c.TEST_LIST_FILE, c.MAX_SEC)
+	test_embs = np.array([emb.tolist() for emb in test_result['embedding']])
+
+	print("Comparing test samples against enroll samples....")
+	distances = pd.DataFrame(cdist(test_embs, enroll_embs, metric=c.COST_METRIC), columns=speakers)
+
+	scores = pd.read_csv(c.TEST_LIST_FILE, delimiter=",",header=0,names=['test_file','test_speaker'])
+	scores = pd.concat([scores, distances],axis=1)
+	scores['result'] = scores[speakers].idxmin(axis=1)
+	scores['correct'] = (scores['result'] == scores['test_speaker'])*1. # bool to int
+	# return scores['result'].values[0]
+	# print(min(distances.values[0]))
+
+	print(min(distances.values[0]))
+
+	return {
+		"name":  scores['result'].values[0],
+		"value": min(distances.values[0])
+	}
 
 if __name__ == '__main__':
 	get_id_result()
+	# test()
